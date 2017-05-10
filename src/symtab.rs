@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-const INITIAL_ENTRIES: [(&str, i64); 22] = [
+const INITIAL_ENTRIES: [(&str, i16); 22] = [
     ("SCREEN", 16384), ("KBD", 24576),
     ("SP",   0), ("LCL",  1), ("THIS", 2), ("THAT", 3),
     ("R0",   0), ("R1",   1), ("R2",   2), ("R3",   3),
@@ -10,7 +10,7 @@ const INITIAL_ENTRIES: [(&str, i64); 22] = [
 ];
 
 struct SymbolTable {
-    table: HashMap<String, i64>
+    table: HashMap<String, i16>
 }
 
 impl SymbolTable {
@@ -22,7 +22,7 @@ impl SymbolTable {
         table
     }
 
-    fn add_entry(&mut self, symbol: &str, address: i64) {
+    fn add_entry(&mut self, symbol: &str, address: i16) {
         self.table.insert(symbol.to_string(), address);
     }
 
@@ -30,7 +30,7 @@ impl SymbolTable {
         self.table.contains_key(symbol)
     }
 
-    fn get_address(&self, symbol: &str) -> i64 {
+    fn get_address(&self, symbol: &str) -> i16 {
         *self.table.get(symbol).unwrap()
     }
 }
