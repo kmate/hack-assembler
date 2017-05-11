@@ -17,12 +17,12 @@ impl SymbolTable {
     fn initial() -> SymbolTable {
         let mut table = SymbolTable { table: HashMap::new() };
         for entry in INITIAL_ENTRIES.iter() {
-            table.add_entry(entry.0, entry.1);
+            table.bind(entry.0, entry.1);
         }
         table
     }
 
-    fn add_entry(&mut self, symbol: &str, address: i16) {
+    fn bind(&mut self, symbol: &str, address: i16) {
         self.table.insert(symbol.to_string(), address);
     }
 
@@ -30,8 +30,8 @@ impl SymbolTable {
         self.table.contains_key(symbol)
     }
 
-    fn get_address(&self, symbol: &str) -> i16 {
-        *self.table.get(symbol).unwrap()
+    fn resolve(&self, symbol: &str) -> Option<i16> {
+        self.table.get(symbol).map(|&x| x)
     }
 }
 
@@ -43,7 +43,7 @@ mod tests {
     fn has_initial_symbols() {
         let table = SymbolTable::initial();
         assert!(table.contains("SP"));
-        assert_eq!(0, table.get_address("SP"));
+        assert_eq!(Some(0), table.resolve("SP"));
     }
 
     #[test]
@@ -55,15 +55,15 @@ mod tests {
     #[test]
     fn resolves_added_symbol() {
         let mut table = SymbolTable::initial();
-        table.add_entry("something", 42);
+        table.bind("something", 42);
         assert!(table.contains("something"));
-        assert_eq!(42, table.get_address("something"));
+        assert_eq!(Some(42), table.resolve("something"));
     }
 
     #[test]
     fn is_case_sensitive() {
         let mut table = SymbolTable::initial();
-        table.add_entry("lowercase", 1337);
+        table.bind("lowercase", 1337);
         assert!(!table.contains("LOWERCASE"));
     }
 }
