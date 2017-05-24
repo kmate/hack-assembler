@@ -9,12 +9,12 @@ const INITIAL_ENTRIES: [(&str, i16); 22] = [
     ("SCREEN", 16384), ("KBD", 24576)
 ];
 
-struct SymbolTable {
+pub struct SymbolTable {
     table: HashMap<String, i16>
 }
 
 impl SymbolTable {
-    fn initial() -> SymbolTable {
+    pub fn initial() -> SymbolTable {
         let mut table = SymbolTable { table: HashMap::new() };
         for entry in INITIAL_ENTRIES.iter() {
             table.bind(entry.0, entry.1);
@@ -22,15 +22,15 @@ impl SymbolTable {
         table
     }
 
-    fn bind(&mut self, symbol: &str, address: i16) {
+    pub fn bind(&mut self, symbol: &str, address: i16) {
         self.table.insert(symbol.to_string(), address);
     }
 
-    fn contains(&self, symbol: &str) -> bool {
+    pub fn contains(&self, symbol: &str) -> bool {
         self.table.contains_key(symbol)
     }
 
-    fn resolve(&self, symbol: &str) -> Option<i16> {
+    pub fn resolve(&self, symbol: &str) -> Option<i16> {
         self.table.get(symbol).map(|&x| x)
     }
 }

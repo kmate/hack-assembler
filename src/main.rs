@@ -1,3 +1,4 @@
+mod parser;
 mod symtab;
 
 fn main() {
