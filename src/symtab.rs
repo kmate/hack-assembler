@@ -56,12 +56,12 @@ impl BindError {
 }
 
 pub struct SymbolTable {
-    table: HashMap<String, i16>,
+    entries: HashMap<String, i16>,
 }
 
 impl SymbolTable {
     pub fn initial() -> SymbolTable {
-        let mut table = SymbolTable { table: HashMap::new() };
+        let mut table = SymbolTable { entries: HashMap::new() };
         for entry in INITIAL_ENTRIES.iter() {
             table.bind(entry.0, entry.1).ok();
         }
@@ -72,17 +72,17 @@ impl SymbolTable {
         if self.contains(symbol) {
             Err(BindError::new(symbol))
         } else {
-            self.table.insert(symbol.to_string(), address);
+            self.entries.insert(symbol.to_string(), address);
             Ok(())
         }
     }
 
     pub fn contains(&self, symbol: &str) -> bool {
-        self.table.contains_key(symbol)
+        self.entries.contains_key(symbol)
     }
 
     pub fn resolve(&self, symbol: &str) -> Option<i16> {
-        self.table.get(symbol).map(|&x| x)
+        self.entries.get(symbol).map(|&x| x)
     }
 }
 
