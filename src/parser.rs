@@ -10,7 +10,13 @@ impl Parser {
 
     fn preprocess(&self, text: &str) -> Vec<String> {
         text.lines()
-            .map(|line| line.replace(|c: char| c.is_whitespace(), "").split("//").next().unwrap().to_string())
+            .map(|line| {
+                line.replace(|c: char| c.is_whitespace(), "")
+                    .split("//")
+                    .next()
+                    .unwrap()
+                    .to_string()
+            })
             .filter(|line| !line.is_empty())
             .collect()
     }
@@ -26,7 +32,9 @@ impl Parser {
     fn collect_labels(&self, text: &str, table: &mut SymbolTable) {
         let lines = self.preprocess(text);
         for (address, line) in lines.iter().enumerate() {
-            self.label_name(line).map(|label| table.bind(label, address as i16));
+            self.label_name(line).map(|label| {
+                table.bind(label, address as i16)
+            });
         }
     }
 }
@@ -38,7 +46,10 @@ mod tests {
     #[test]
     fn whitespaces_trimmed() {
         let parser = Parser::new();
-        assert_eq!(vec!["a", "b", "cd"], parser.preprocess(" a\t \n\t b\r\n c d"));
+        assert_eq!(
+            vec!["a", "b", "cd"],
+            parser.preprocess(" a\t \n\t b\r\n c d")
+        );
     }
 
     #[test]
