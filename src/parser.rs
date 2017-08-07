@@ -1,5 +1,5 @@
 use std::iter::Iterator;
-use super::symtab::SymbolTable;
+use symtab::SymbolTable;
 
 pub struct Parser;
 
