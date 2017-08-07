@@ -1,4 +1,7 @@
 use std::collections::HashMap;
+use std::fmt;
+use std::fmt::Display;
+use std::error::Error;
 
 const INITIAL_ENTRIES: [(&str, i16); 22] = [
     ("R0",   0), ("R1",   1), ("R2",   2), ("R3",   3),
@@ -9,6 +12,33 @@ const INITIAL_ENTRIES: [(&str, i16); 22] = [
     ("SCREEN", 16384), ("KBD", 24576)
 ];
 
+#[derive(Debug, PartialEq)]
+pub struct BindError {
+    symbol: String
+}
+
+impl Display for BindError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Unable to rebind symbol {}", self.symbol)
+    }
+}
+
+impl Error for BindError {
+    fn description(&self) -> &str {
+        self.symbol.as_str()
+    }
+
+    fn cause(&self) -> Option<&Error> {
+        None
+    }
+}
+
+impl BindError {
+    fn new(symbol: &str) -> BindError {
+        BindError { symbol: symbol.to_owned() }
+    }
+}
+
 pub struct SymbolTable {
     table: HashMap<String, i16>
 }
@@ -17,13 +47,18 @@ impl SymbolTable {
     pub fn initial() -> SymbolTable {
         let mut table = SymbolTable { table: HashMap::new() };
         for entry in INITIAL_ENTRIES.iter() {
-            table.bind(entry.0, entry.1);
+            table.bind(entry.0, entry.1).ok();
         }
         table
     }
 
-    pub fn bind(&mut self, symbol: &str, address: i16) {
-        self.table.insert(symbol.to_string(), address);
+    pub fn bind(&mut self, symbol: &str, address: i16) -> Result<(), BindError> {
+        if self.contains(symbol) {
+            Err(BindError::new(symbol))
+        } else {
+            self.table.insert(symbol.to_string(), address);
+            Ok(())
+        }
     }
 
     pub fn contains(&self, symbol: &str) -> bool {
@@ -55,7 +90,7 @@ mod tests {
     #[test]
     fn resolves_added_symbol() {
         let mut table = SymbolTable::initial();
-        table.bind("something", 42);
+        assert_eq!(Ok(()), table.bind("something", 42));
         assert!(table.contains("something"));
         assert_eq!(Some(42), table.resolve("something"));
     }
@@ -63,7 +98,13 @@ mod tests {
     #[test]
     fn is_case_sensitive() {
         let mut table = SymbolTable::initial();
-        table.bind("lowercase", 1337);
+        assert_eq!(Ok(()), table.bind("lowercase", 1337));
         assert!(!table.contains("LOWERCASE"));
+    }
+
+    #[test]
+    fn bind_to_existing_is_error() {
+        let mut table = SymbolTable::initial();
+        assert_eq!(Err(BindError::new("SP")), table.bind("SP", 42));
     }
 }
