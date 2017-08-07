@@ -68,7 +68,7 @@ mod tests {
     #[test]
     fn labels_collected() {
         let parser = Parser::new();
-        let mut table = SymbolTable::initial();
+        let mut table = SymbolTable::new();
         parser.collect_labels("(a)\nb\n\n(c)\nd", &mut table);
         assert_eq!(Some(0), table.resolve("a"));
         assert_eq!(Some(2), table.resolve("c"));

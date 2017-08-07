@@ -1,32 +1,8 @@
 use std::collections::HashMap;
+use std::clone::Clone;
 use std::fmt;
 use std::fmt::Display;
 use std::error::Error;
-
-const INITIAL_ENTRIES: [(&str, i16); 22] = [
-    ("R0", 0),
-    ("R1", 1),
-    ("R2", 2),
-    ("R3", 3),
-    ("R4", 4),
-    ("R5", 5),
-    ("R6", 6),
-    ("R7", 7),
-    ("R8", 8),
-    ("R9", 9),
-    ("R10", 10),
-    ("R11", 11),
-    ("R12", 12),
-    ("R13", 13),
-    ("R14", 14),
-    ("R15", 15),
-    ("SP", 0),
-    ("LCL", 1),
-    ("THIS", 2),
-    ("THAT", 3),
-    ("SCREEN", 16384),
-    ("KBD", 24576),
-];
 
 #[derive(Debug, PartialEq)]
 pub struct BindError {
@@ -55,17 +31,49 @@ impl BindError {
     }
 }
 
+#[derive(Clone)]
 pub struct SymbolTable {
     entries: HashMap<String, i16>,
 }
 
-impl SymbolTable {
-    pub fn initial() -> SymbolTable {
+lazy_static! {
+    static ref INITIAL_TABLE: SymbolTable = {
+        let initial_entries: [(&str, i16); 22] = [
+            ("R0", 0),
+            ("R1", 1),
+            ("R2", 2),
+            ("R3", 3),
+            ("R4", 4),
+            ("R5", 5),
+            ("R6", 6),
+            ("R7", 7),
+            ("R8", 8),
+            ("R9", 9),
+            ("R10", 10),
+            ("R11", 11),
+            ("R12", 12),
+            ("R13", 13),
+            ("R14", 14),
+            ("R15", 15),
+            ("SP", 0),
+            ("LCL", 1),
+            ("THIS", 2),
+            ("THAT", 3),
+            ("SCREEN", 16384),
+            ("KBD", 24576),
+        ];
+
         let mut table = SymbolTable { entries: HashMap::new() };
-        for entry in INITIAL_ENTRIES.iter() {
+        for entry in initial_entries.iter() {
             table.bind(entry.0, entry.1).ok();
         }
         table
+    };
+}
+
+impl SymbolTable {
+    pub fn new() -> SymbolTable {
+        INITIAL_TABLE.clone()
     }
 
     pub fn bind(&mut self, symbol: &str, address: i16) -> Result<(), BindError> {
@@ -92,20 +100,20 @@ mod tests {
 
     #[test]
     fn has_initial_symbols() {
-        let table = SymbolTable::initial();
+        let table = SymbolTable::new();
         assert!(table.contains("SP"));
         assert_eq!(Some(0), table.resolve("SP"));
     }
 
     #[test]
     fn does_not_contain_missing_symbol() {
-        let table = SymbolTable::initial();
+        let table = SymbolTable::new();
         assert!(!table.contains("something"));
     }
 
     #[test]
     fn resolves_added_symbol() {
-        let mut table = SymbolTable::initial();
+        let mut table = SymbolTable::new();
         assert_eq!(Ok(()), table.bind("something", 42));
         assert!(table.contains("something"));
         assert_eq!(Some(42), table.resolve("something"));
@@ -113,14 +121,14 @@ mod tests {
 
     #[test]
     fn is_case_sensitive() {
-        let mut table = SymbolTable::initial();
+        let mut table = SymbolTable::new();
         assert_eq!(Ok(()), table.bind("lowercase", 1337));
         assert!(!table.contains("LOWERCASE"));
     }
 
     #[test]
     fn bind_to_existing_is_error() {
-        let mut table = SymbolTable::initial();
+        let mut table = SymbolTable::new();
         assert_eq!(Err(BindError::new("SP")), table.bind("SP", 42));
     }
 }
