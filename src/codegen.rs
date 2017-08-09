@@ -1,6 +1,9 @@
 use inst::Inst;
 use inst::Inst::*;
 use std::collections::HashMap;
+use std::fmt;
+use std::fmt::Display;
+use std::error::Error;
 
 type LookupTable = HashMap<&'static str, u16>;
 
@@ -63,15 +66,65 @@ lazy_static! {
     };
 }
 
-pub fn compile(inst: Inst) -> u16 {
+
+#[derive(Debug, PartialEq)]
+pub enum MissInfo<'a> {
+    Comp(&'a str),
+    Dest(&'a str),
+    Jump(&'a str),
+}
+
+use self::MissInfo::*;
+
+impl<'a> Display for MissInfo<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Comp(comp) => write!(f, "computation `{}'", comp),
+            Dest(dest) => write!(f, "destination `{}'", dest),
+            Jump(jump) => write!(f, "jump specifiction `{}'", jump),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum CompileError<'a> {
+    LookupMiss(MissInfo<'a>),
+}
+
+use self::CompileError::*;
+
+impl<'a> Display for CompileError<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            LookupMiss(ref info) => write!(f, "Lookup table miss: {}", info),
+        }
+    }
+}
+
+impl<'a> Error for CompileError<'a> {
+    fn description(&self) -> &str {
+        "compilation error"
+    }
+
+    fn cause(&self) -> Option<&Error> {
+        None
+    }
+}
+
+pub fn compile(inst: Inst) -> Result<u16, CompileError> {
     match inst {
-        AInst { address } => address as u16 & 0x7FFFu16,
+        AInst { address } => Ok(address as u16 & 0x7FFFu16),
         CInst { comp, dest, jump } => {
-            // TODO: handle unknown instructions instead of unwrapping
-            let c = COMP_TABLE.get(&comp).unwrap();
-            let d = dest.map_or(0, |dest| *DEST_TABLE.get(dest).unwrap());
-            let j = jump.map_or(0, |jump| *JUMP_TABLE.get(jump).unwrap());
-            0xE000u16 + (c << 6) + (d << 3) + j
+            let c = COMP_TABLE.get(&comp).ok_or(LookupMiss(Comp(comp)))?;
+            let d = match dest {
+                None => 0,
+                Some(dest) => *DEST_TABLE.get(dest).ok_or(LookupMiss(Dest(dest)))?,
+            };
+            let j = match jump {
+                None => 0,
+                Some(jump) => *JUMP_TABLE.get(jump).ok_or(LookupMiss(Jump(jump)))?,
+            };
+            Ok(0xE000u16 + (c << 6) + (d << 3) + j)
         }
     }
 }
@@ -82,14 +135,14 @@ mod tests {
 
     #[test]
     fn compile_a_inst() {
-        assert_eq!(42, compile(AInst { address: 42 }));
-        assert_eq!(1, compile(AInst { address: (1 << 15) + 1 }));
+        assert_eq!(Ok(42), compile(AInst { address: 42 }));
+        assert_eq!(Ok(1), compile(AInst { address: (1 << 15) + 1 }));
     }
 
     #[test]
     fn compile_c_inst() {
         assert_eq!(
-            0b1111010101000000,
+            Ok(0b1111010101000000),
             compile(CInst {
                 comp: "D|M",
                 dest: None,
@@ -97,11 +150,39 @@ mod tests {
             })
         );
         assert_eq!(
-            0b1110010101101011,
+            Ok(0b1110010101101011),
             compile(CInst {
                 comp: "D|A",
                 dest: Some("AM"),
                 jump: Some("JGE"),
+            })
+        );
+    }
+
+    #[test]
+    fn compile_errors() {
+        assert_eq!(
+            Err(LookupMiss(Comp("UNKNOWN"))),
+            compile(CInst {
+                comp: "UNKNOWN",
+                dest: None,
+                jump: None,
+            })
+        );
+        assert_eq!(
+            Err(LookupMiss(Dest("UNKNOWN"))),
+            compile(CInst {
+                comp: "D|M",
+                dest: Some("UNKNOWN"),
+                jump: None,
+            })
+        );
+        assert_eq!(
+            Err(LookupMiss(Jump("UNKNOWN"))),
+            compile(CInst {
+                comp: "D|M",
+                dest: None,
+                jump: Some("UNKNOWN"),
             })
         );
     }
