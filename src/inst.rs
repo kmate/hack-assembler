@@ -1,5 +1,6 @@
+#[derive(Debug, PartialEq)]
 pub enum Inst<'a> {
-    AInst { address: i16 },
+    AInst { address: u16 },
     CInst {
         comp: &'a str,
         dest: Option<&'a str>,

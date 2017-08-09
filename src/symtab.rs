@@ -33,12 +33,12 @@ impl BindError {
 
 #[derive(Clone)]
 pub struct SymbolTable {
-    entries: HashMap<String, i16>,
+    entries: HashMap<String, u16>,
 }
 
 lazy_static! {
     static ref INITIAL_TABLE: SymbolTable = {
-        let initial_entries: [(&str, i16); 22] = [
+        let initial_entries: [(&str, u16); 22] = [
             ("R0", 0),
             ("R1", 1),
             ("R2", 2),
@@ -76,7 +76,7 @@ impl SymbolTable {
         INITIAL_TABLE.clone()
     }
 
-    pub fn bind(&mut self, symbol: &str, address: i16) -> Result<(), BindError> {
+    pub fn bind(&mut self, symbol: &str, address: u16) -> Result<(), BindError> {
         if self.contains(symbol) {
             Err(BindError::new(symbol))
         } else {
@@ -89,7 +89,7 @@ impl SymbolTable {
         self.entries.contains_key(symbol)
     }
 
-    pub fn resolve(&self, symbol: &str) -> Option<i16> {
+    pub fn resolve(&self, symbol: &str) -> Option<u16> {
         self.entries.get(symbol).map(|&x| x)
     }
 }
