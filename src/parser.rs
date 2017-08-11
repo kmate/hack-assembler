@@ -28,9 +28,17 @@ fn preprocess(text: &str) -> Vec<String> {
         .collect()
 }
 
+lazy_static! {
+    static ref LABEL: Regex = Regex::new(r"\(\s*(?P<label>\pL+)\s*\)").unwrap();
+    static ref A_INST: Regex = Regex::new(r"^@(?P<symbol>\pL+)$").unwrap();
+    static ref C_INST: Regex = Regex::new(concat!(r"^((?P<dest>[AMD]{1,3})\s*=\s*)?",
+                                                  r"(?P<comp>[\-\+\|&!01ADM]+)",
+                                                  r"(\s*;\s*(?P<jump>[EGJLMNPQT]{3}))?$")).unwrap();
+}
+
 fn label_name(line: &str) -> Option<&str> {
-    if line.starts_with('(') && line.ends_with(')') {
-        Some(line.trim_matches(|c| '(' == c || ')' == c))
+    if let Some(parts) = LABEL.captures(line) {
+        Some(parts.name("label").unwrap().as_str())
     } else {
         None
     }
@@ -41,13 +49,6 @@ pub fn collect_labels(text: &str, table: &mut SymbolTable) {
     for (address, line) in lines.iter().enumerate() {
         label_name(line).map(|label| table.bind(label, address as u16));
     }
-}
-
-lazy_static! {
-    static ref A_INST: Regex = Regex::new(r"^@(?P<symbol>\pL+)$").unwrap();
-    static ref C_INST: Regex = Regex::new(concat!(r"^((?P<dest>[AMD]{1,3})\s*=\s*)?",
-                                                  r"(?P<comp>[\-\+\|&!01ADM]+)",
-                                                  r"(\s*;\s*(?P<jump>[EGJLMNPQT]{3}))?$")).unwrap();
 }
 
 fn parse_inst<'a, 'b>(line: &'a str, table: &'b SymbolTable) -> Result<Inst<'a>, ParseError<'a>> {
