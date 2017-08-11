@@ -1,18 +1,38 @@
 use inst::Inst;
 use inst::Inst::*;
 use regex::Regex;
+use std::fmt;
+use std::fmt::Display;
+use std::error::Error;
 use std::iter::Iterator;
 use symtab::SymbolTable;
 
 #[derive(Debug, PartialEq)]
 pub enum ParseError<'a> {
-    UndefinedSymbol(String),
+    UndefinedSymbol(&'a str),
     UnknownInst(&'a str),
 }
 
 use self::ParseError::*;
 
-// TODO define error impl for ParseError
+impl<'a> Display for ParseError<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            UndefinedSymbol(symbol) => write!(f, "Undefined symbol: {}", symbol),
+            UnknownInst(line) => write!(f, "Unknown instruction: {}", line),
+        }
+    }
+}
+
+impl<'a> Error for ParseError<'a> {
+    fn description(&self) -> &str {
+        "parse error"
+    }
+
+    fn cause(&self) -> Option<&Error> {
+        None
+    }
+}
 
 fn preprocess(text: &str) -> Vec<String> {
     text.lines()
@@ -53,10 +73,8 @@ pub fn collect_labels(text: &str, table: &mut SymbolTable) {
 
 fn parse_inst<'a, 'b>(line: &'a str, table: &'b SymbolTable) -> Result<Inst<'a>, ParseError<'a>> {
     if let Some(parts) = A_INST.captures(line) {
-        let symbol = &parts["symbol"];
-        let address = table.resolve(symbol).ok_or(
-            UndefinedSymbol(symbol.to_string()),
-        )?;
+        let symbol = parts.name("symbol").unwrap().as_str();
+        let address = table.resolve(symbol).ok_or(UndefinedSymbol(symbol))?;
         Ok(AInst { address: address })
     } else if let Some(parts) = C_INST.captures(line) {
         (Ok(CInst {
@@ -100,10 +118,7 @@ mod tests {
     #[test]
     fn parse_a_inst() {
         let mut table = SymbolTable::new();
-        assert_eq!(
-            Err(UndefinedSymbol("X".to_string())),
-            parse_inst("@X", &table)
-        );
+        assert_eq!(Err(UndefinedSymbol("X")), parse_inst("@X", &table));
         table.bind("X", 42).ok();
         assert_eq!(Ok(AInst { address: 42 }), parse_inst("@X", &table));
     }
