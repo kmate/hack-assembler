@@ -82,8 +82,14 @@ pub fn label_name(line: &str) -> Option<&str> {
 
 pub fn collect_labels(text: &str, table: &mut SymbolTable) {
     let lines = preprocess(text);
-    for (address, line) in lines.iter().enumerate() {
-        label_name(line).map(|label| table.bind(label, address as u16));
+    let mut label_count = 0;
+    for (row, line) in lines.iter().enumerate() {
+        let address = row as u16 - label_count;
+        if let Some(label) = label_name(line) {
+            // TODO handle bind errors
+            table.bind(label, address).ok();
+            label_count += 1;
+        }
     }
 }
 
@@ -132,9 +138,9 @@ mod tests {
     #[test]
     fn labels_collected() {
         let mut table = SymbolTable::new();
-        collect_labels("(a)\nb\n \n(c)\nd", &mut table);
+        collect_labels("(a)\nb\nc\n \n(d)\ne", &mut table);
         assert_eq!(Some(0), table.resolve("a"));
-        assert_eq!(Some(2), table.resolve("c"));
+        assert_eq!(Some(2), table.resolve("d"));
     }
 
     #[test]
