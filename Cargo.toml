@@ -3,5 +3,6 @@ name = "hack-assembler"
 version = "0.1.0"
 
 [dependencies]
+clap = "2.26"
 lazy_static = "0.2"
 regex = "0.2"
