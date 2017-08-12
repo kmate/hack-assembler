@@ -39,7 +39,7 @@ pub struct SymbolTable {
 
 lazy_static! {
     static ref INITIAL_TABLE: SymbolTable = {
-        let initial_entries: [(&str, u16); 22] = [
+        let initial_entries: [(&str, u16); 23] = [
             ("R0", 0),
             ("R1", 1),
             ("R2", 2),
@@ -58,8 +58,9 @@ lazy_static! {
             ("R15", 15),
             ("SP", 0),
             ("LCL", 1),
-            ("THIS", 2),
-            ("THAT", 3),
+            ("ARG", 2),
+            ("THIS", 3),
+            ("THAT", 4),
             ("SCREEN", 16384),
             ("KBD", 24576),
         ];
