@@ -1,14 +1,17 @@
 use inst::Inst;
 use inst::Inst::*;
 use regex::Regex;
+use std::convert::From;
+use std::error::Error;
 use std::fmt;
 use std::fmt::Display;
-use std::error::Error;
 use std::iter::Iterator;
+use std::num::ParseIntError;
 use symtab::SymbolTable;
 
 #[derive(Debug, PartialEq)]
 pub enum ParseError<'a> {
+    InvalidAddress,
     UndefinedSymbol(&'a str),
     UnknownInst(&'a str),
 }
@@ -18,8 +21,9 @@ use self::ParseError::*;
 impl<'a> Display for ParseError<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            UndefinedSymbol(symbol) => write!(f, "Undefined symbol: {}", symbol),
-            UnknownInst(line) => write!(f, "Unknown instruction: {}", line),
+            InvalidAddress => write!(f, "unable to parse address"),
+            UndefinedSymbol(symbol) => write!(f, "undefined symbol: {}", symbol),
+            UnknownInst(line) => write!(f, "unknown instruction: {}", line),
         }
     }
 }
@@ -31,6 +35,12 @@ impl<'a> Error for ParseError<'a> {
 
     fn cause(&self) -> Option<&Error> {
         None
+    }
+}
+
+impl<'a> From<ParseIntError> for ParseError<'a> {
+    fn from(_: ParseIntError) -> Self {
+        InvalidAddress
     }
 }
 
@@ -50,7 +60,7 @@ pub fn preprocess(text: &str) -> Vec<String> {
 
 lazy_static! {
     static ref LABEL: Regex = Regex::new(r"\(\s*(?P<label>\pL+)\s*\)").unwrap();
-    static ref A_INST: Regex = Regex::new(r"^@(?P<symbol>\pL+)$").unwrap();
+    static ref A_INST: Regex = Regex::new(r"^@((?P<address>\d+)|(?P<symbol>\pL+))$").unwrap();
     static ref C_INST: Regex = Regex::new(concat!(r"^((?P<dest>[AMD]{1,3})\s*=\s*)?",
                                                   r"(?P<comp>[\-\+\|&!01ADM]+)",
                                                   r"(\s*;\s*(?P<jump>[EGJLMNPQT]{3}))?$")).unwrap();
@@ -71,10 +81,18 @@ pub fn collect_labels(text: &str, table: &mut SymbolTable) {
     }
 }
 
-pub fn parse_inst<'a, 'b>(line: &'a str, table: &'b SymbolTable) -> Result<Inst<'a>, ParseError<'a>> {
+pub fn parse_inst<'a, 'b>(
+    line: &'a str,
+    table: &'b SymbolTable,
+) -> Result<Inst<'a>, ParseError<'a>> {
     if let Some(parts) = A_INST.captures(line) {
-        let symbol = parts.name("symbol").unwrap().as_str();
-        let address = table.resolve(symbol).ok_or(UndefinedSymbol(symbol))?;
+        let address = if let Some(symbol) = parts.name("symbol") {
+            table.resolve(symbol.as_str()).ok_or(UndefinedSymbol(
+                symbol.as_str(),
+            ))?
+        } else {
+            parts.name("address").unwrap().as_str().parse::<u16>()?
+        };
         Ok(AInst { address: address })
     } else if let Some(parts) = C_INST.captures(line) {
         (Ok(CInst {
@@ -118,6 +136,8 @@ mod tests {
     #[test]
     fn parse_a_inst() {
         let mut table = SymbolTable::new();
+        assert_eq!(Ok(AInst { address: 42 }), parse_inst("@42", &table));
+        assert_eq!(Err(InvalidAddress), parse_inst("@70000", &table));
         assert_eq!(Err(UndefinedSymbol("X")), parse_inst("@X", &table));
         table.bind("X", 42).ok();
         assert_eq!(Ok(AInst { address: 42 }), parse_inst("@X", &table));

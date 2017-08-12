@@ -80,7 +80,7 @@ fn main() {
         });
     let code = insts
         .map(|inst| {
-            format!("{:b}", codegen::compile(inst).expect("Compilation error"))
+            format!("{:016b}", codegen::compile(inst).expect("Compilation error"))
         })
         .collect::<Vec<String>>()
         .join("\n");
