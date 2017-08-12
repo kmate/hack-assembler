@@ -34,7 +34,7 @@ impl<'a> Error for ParseError<'a> {
     }
 }
 
-fn preprocess(text: &str) -> Vec<String> {
+pub fn preprocess(text: &str) -> Vec<String> {
     text.lines()
         .map(|line| {
             line.replace(|c: char| c.is_whitespace(), "")
@@ -56,7 +56,7 @@ lazy_static! {
                                                   r"(\s*;\s*(?P<jump>[EGJLMNPQT]{3}))?$")).unwrap();
 }
 
-fn label_name(line: &str) -> Option<&str> {
+pub fn label_name(line: &str) -> Option<&str> {
     if let Some(parts) = LABEL.captures(line) {
         Some(parts.name("label").unwrap().as_str())
     } else {
@@ -71,7 +71,7 @@ pub fn collect_labels(text: &str, table: &mut SymbolTable) {
     }
 }
 
-fn parse_inst<'a, 'b>(line: &'a str, table: &'b SymbolTable) -> Result<Inst<'a>, ParseError<'a>> {
+pub fn parse_inst<'a, 'b>(line: &'a str, table: &'b SymbolTable) -> Result<Inst<'a>, ParseError<'a>> {
     if let Some(parts) = A_INST.captures(line) {
         let symbol = parts.name("symbol").unwrap().as_str();
         let address = table.resolve(symbol).ok_or(UndefinedSymbol(symbol))?;

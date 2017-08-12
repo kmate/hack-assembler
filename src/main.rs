@@ -69,6 +69,20 @@ fn main() {
         .get_matches();
 
     let buffer = read_input(matches.value_of("input")).expect("Input error");
-    // TODO insert parsing and code generation logic
-    write_output(matches.value_of("output"), buffer).expect("Output error");
+    let mut table = symtab::SymbolTable::new();
+    parser::collect_labels(&buffer, &mut table);
+    let lines = parser::preprocess(&buffer);
+    let insts = lines
+        .iter()
+        .filter(|line| parser::label_name(line).is_none())
+        .map(|line| {
+            parser::parse_inst(line, &table).expect("Parse error")
+        });
+    let code = insts
+        .map(|inst| {
+            format!("{:b}", codegen::compile(inst).expect("Compilation error"))
+        })
+        .collect::<Vec<String>>()
+        .join("\n");
+    write_output(matches.value_of("output"), code).expect("Output error");
 }
