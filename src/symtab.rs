@@ -5,19 +5,25 @@ use std::fmt::Display;
 use std::error::Error;
 
 #[derive(Debug, PartialEq)]
-pub struct BindError {
-    symbol: String,
+pub enum BindError<'a> {
+    AlreadyBound { symbol: &'a str },
+    TooManyBindings,
 }
 
-impl Display for BindError {
+use self::BindError::*;
+
+impl<'a> Display for BindError<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Unable to rebind symbol {}", self.symbol)
+        match *self {
+            AlreadyBound { symbol } => write!(f, "Unable to rebind symbol {}", symbol),
+            TooManyBindings => write!(f, "Too many bindings"),
+        }
     }
 }
 
-impl Error for BindError {
+impl<'a> Error for BindError<'a> {
     fn description(&self) -> &str {
-        self.symbol.as_str()
+        "bind error"
     }
 
     fn cause(&self) -> Option<&Error> {
@@ -25,15 +31,10 @@ impl Error for BindError {
     }
 }
 
-impl BindError {
-    fn new(symbol: &str) -> BindError {
-        BindError { symbol: symbol.to_owned() }
-    }
-}
-
 #[derive(Clone)]
 pub struct SymbolTable {
     entries: HashMap<String, u16>,
+    next_local: u16,
 }
 
 lazy_static! {
@@ -63,7 +64,7 @@ lazy_static! {
             ("KBD", 24576),
         ];
 
-        let mut table = SymbolTable { entries: HashMap::new() };
+        let mut table = SymbolTable { entries: HashMap::new(), next_local: 16 };
         for entry in initial_entries.iter() {
             table.bind(entry.0, entry.1).ok();
         }
@@ -76,21 +77,32 @@ impl SymbolTable {
         INITIAL_TABLE.clone()
     }
 
-    pub fn bind(&mut self, symbol: &str, address: u16) -> Result<(), BindError> {
+    pub fn bind<'a>(&mut self, symbol: &'a str, address: u16) -> Result<u16, BindError<'a>> {
         if self.contains(symbol) {
-            Err(BindError::new(symbol))
+            Err(AlreadyBound { symbol: symbol })
         } else {
             self.entries.insert(symbol.to_string(), address);
-            Ok(())
+            Ok(address)
         }
     }
 
-    pub fn contains(&self, symbol: &str) -> bool {
+    fn contains(&self, symbol: &str) -> bool {
         self.entries.contains_key(symbol)
     }
 
     pub fn resolve(&self, symbol: &str) -> Option<u16> {
         self.entries.get(symbol).map(|&x| x)
+    }
+
+    pub fn resolve_or_bind<'a>(&mut self, symbol: &'a str) -> Result<u16, BindError<'a>> {
+        self.resolve(symbol).map(Ok).unwrap_or_else(|| {
+            if self.next_local == <u16>::max_value() {
+                return Err(TooManyBindings);
+            }
+            let address = self.next_local;
+            self.next_local += 1;
+            self.bind(symbol, address)
+        })
     }
 }
 
@@ -114,7 +126,7 @@ mod tests {
     #[test]
     fn resolves_added_symbol() {
         let mut table = SymbolTable::new();
-        assert_eq!(Ok(()), table.bind("something", 42));
+        assert_eq!(Ok(42), table.bind("something", 42));
         assert!(table.contains("something"));
         assert_eq!(Some(42), table.resolve("something"));
     }
@@ -122,13 +134,26 @@ mod tests {
     #[test]
     fn is_case_sensitive() {
         let mut table = SymbolTable::new();
-        assert_eq!(Ok(()), table.bind("lowercase", 1337));
+        assert_eq!(Ok(1337), table.bind("lowercase", 1337));
         assert!(!table.contains("LOWERCASE"));
     }
 
     #[test]
     fn bind_to_existing_is_error() {
         let mut table = SymbolTable::new();
-        assert_eq!(Err(BindError::new("SP")), table.bind("SP", 42));
+        assert_eq!(Err(AlreadyBound { symbol: "SP" }), table.bind("SP", 42));
+    }
+
+    #[test]
+    fn resolve_or_bind() {
+        let mut table = SymbolTable::new();
+        table.bind("A", 1).ok();
+        assert_eq!(Ok(1), table.resolve_or_bind("A"));
+        assert_eq!(Ok(16), table.resolve_or_bind("B"));
+        assert_eq!(Ok(17), table.resolve_or_bind("C"));
+        for address in 18..<u16>::max_value() {
+            table.resolve_or_bind(format!("X{}", address).as_str()).ok();
+        }
+        assert_eq!(Err(TooManyBindings), table.resolve_or_bind("Z"));
     }
 }

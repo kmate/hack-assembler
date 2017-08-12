@@ -76,7 +76,7 @@ fn main() {
         .iter()
         .filter(|line| parser::label_name(line).is_none())
         .map(|line| {
-            parser::parse_inst(line, &table).expect("Parse error")
+            parser::parse_inst(line, &mut table).expect("Parse error")
         });
     let code = insts
         .map(|inst| {
