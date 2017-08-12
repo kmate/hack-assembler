@@ -59,8 +59,8 @@ pub fn preprocess(text: &str) -> Vec<String> {
 }
 
 lazy_static! {
-    static ref LABEL: Regex = Regex::new(r"\(\s*(?P<label>\pL+)\s*\)").unwrap();
-    static ref A_INST: Regex = Regex::new(r"^@((?P<address>\d+)|(?P<symbol>\pL+))$").unwrap();
+    static ref LABEL: Regex = Regex::new(r"\(\s*(?P<label>\pL[\pL\d_]*)\s*\)").unwrap();
+    static ref A_INST: Regex = Regex::new(r"^@((?P<address>\d+)|(?P<symbol>\pL[\pL\d_]*))$").unwrap();
     static ref C_INST: Regex = Regex::new(concat!(r"^((?P<dest>[AMD]{1,3})\s*=\s*)?",
                                                   r"(?P<comp>[\-\+\|&!01ADM]+)",
                                                   r"(\s*;\s*(?P<jump>[EGJLMNPQT]{3}))?$")).unwrap();
