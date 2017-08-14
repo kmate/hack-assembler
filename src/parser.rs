@@ -83,16 +83,16 @@ pub fn label_name(line: &str) -> Option<&str> {
     }
 }
 
-pub fn collect_labels(lines: &CleanLines, table: &mut SymbolTable) {
+pub fn collect_labels<'a>(lines: &'a CleanLines, table: &mut SymbolTable) -> Result<(), BindError<'a>> {
     let mut label_count = 0;
     for (row, line) in lines.iter().enumerate() {
         let address = row as u16 - label_count;
         if let Some(label) = label_name(line) {
-            // TODO handle bind errors
-            table.bind(label, address).ok();
+            table.bind(label, address)?;
             label_count += 1;
         }
     }
+    Ok(())
 }
 
 pub fn parse_inst<'a, 'b>(
@@ -141,7 +141,7 @@ mod tests {
     fn labels_collected() {
         let mut table = SymbolTable::new();
         let lines = preprocess("(a)\nb\nc\n \n(d)\ne");
-        collect_labels(&lines, &mut table);
+        collect_labels(&lines, &mut table).ok();
         assert_eq!(Some(0), table.resolve("a"));
         assert_eq!(Some(2), table.resolve("d"));
     }
