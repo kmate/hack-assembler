@@ -22,8 +22,8 @@ impl<'a> Display for ParseError<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             InvalidAddress => write!(f, "unable to parse address"),
-            BindError(ref error) => write!(f, "unable to bind symbol to address: {}", error),
-            UnknownInst(line) => write!(f, "unknown instruction: {}", line),
+            BindError(ref error) => write!(f, "unable to bind symbol to address `{}'", error),
+            UnknownInst(line) => write!(f, "unknown instruction `{}'", line),
         }
     }
 }

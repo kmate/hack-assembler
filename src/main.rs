@@ -9,6 +9,7 @@ use std::fs;
 use std::fs::File;
 use std::io;
 use std::io::{Read, Write};
+use std::process::exit;
 
 mod codegen;
 mod inst;
@@ -46,6 +47,15 @@ fn write_output(output_option: Option<&str>, buffer: String) -> io::Result<()> {
     Ok(())
 }
 
+macro_rules! catch {
+    ($x: expr, $msg: expr) => {{
+        $x.unwrap_or_else(|error| {
+            io::stderr().write_fmt(format_args!(concat!($msg, ": {}\n"), error)).ok();
+            exit(1);
+        })
+    }};
+}
+
 fn main() {
     let matches = App::new("Hack Assembler")
         .version("1.0")
@@ -68,21 +78,30 @@ fn main() {
         )
         .get_matches();
 
-    let buffer = read_input(matches.value_of("input")).expect("Input error");
+    let buffer = catch!(read_input(matches.value_of("input")), "Input error");
     let mut table = symtab::SymbolTable::new();
     let lines = parser::preprocess(&buffer);
-    parser::collect_labels(&lines, &mut table).expect("Unable to collect labels");
+    catch!(
+        parser::collect_labels(&lines, &mut table),
+        "Unable to collect labels"
+    );
     let insts = lines
         .iter()
         .filter(|line| parser::label_name(line).is_none())
         .map(|line| {
-            parser::parse_inst(line, &mut table).expect("Parse error")
+            catch!(parser::parse_inst(line, &mut table), "Parse error")
         });
     let code = insts
         .map(|inst| {
-            format!("{:016b}", codegen::compile(inst).expect("Compilation error"))
+            format!(
+                "{:016b}",
+                catch!(codegen::compile(inst), "Compilation error")
+            )
         })
         .collect::<Vec<String>>()
         .join("\n");
-    write_output(matches.value_of("output"), code).expect("Output error");
+    catch!(
+        write_output(matches.value_of("output"), code),
+        "Output error"
+    );
 }

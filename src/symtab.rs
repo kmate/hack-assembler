@@ -15,8 +15,8 @@ use self::BindError::*;
 impl<'a> Display for BindError<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            AlreadyBound { symbol } => write!(f, "Unable to rebind symbol {}", symbol),
-            TooManyBindings => write!(f, "Too many bindings"),
+            AlreadyBound { symbol } => write!(f, "unable to rebind symbol `{}'", symbol),
+            TooManyBindings => write!(f, "too many bindings"),
         }
     }
 }

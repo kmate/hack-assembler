@@ -96,7 +96,7 @@ use self::CompileError::*;
 impl<'a> Display for CompileError<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            LookupMiss(ref info) => write!(f, "Lookup table miss: {}", info),
+            LookupMiss(ref info) => write!(f, "lookup table miss `{}'", info),
         }
     }
 }
