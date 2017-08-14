@@ -83,7 +83,10 @@ pub fn label_name(line: &str) -> Option<&str> {
     }
 }
 
-pub fn collect_labels<'a>(lines: &'a CleanLines, table: &mut SymbolTable) -> Result<(), BindError<'a>> {
+pub fn collect_labels<'a>(
+    lines: &'a CleanLines,
+    table: &mut SymbolTable,
+) -> Result<(), BindError<'a>> {
     let mut label_count = 0;
     for (row, line) in lines.iter().enumerate() {
         let address = row as u16 - label_count;
@@ -95,9 +98,9 @@ pub fn collect_labels<'a>(lines: &'a CleanLines, table: &mut SymbolTable) -> Res
     Ok(())
 }
 
-pub fn parse_inst<'a, 'b>(
+pub fn parse_inst<'a>(
     line: &'a str,
-    table: &'b mut SymbolTable,
+    table: &mut SymbolTable,
 ) -> Result<Inst<'a>, ParseError<'a>> {
     if let Some(parts) = A_INST.captures(line) {
         let address = if let Some(symbol) = parts.name("symbol") {
