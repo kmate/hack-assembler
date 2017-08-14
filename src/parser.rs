@@ -50,7 +50,9 @@ impl<'a> From<BindError<'a>> for ParseError<'a> {
     }
 }
 
-pub fn preprocess(text: &str) -> Vec<String> {
+type CleanLines = Vec<String>;
+
+pub fn preprocess(text: &str) -> CleanLines {
     text.lines()
         .map(|line| {
             line.replace(|c: char| c.is_whitespace(), "")
@@ -80,8 +82,7 @@ pub fn label_name(line: &str) -> Option<&str> {
     }
 }
 
-pub fn collect_labels(text: &str, table: &mut SymbolTable) {
-    let lines = preprocess(text);
+pub fn collect_labels(lines: &CleanLines, table: &mut SymbolTable) {
     let mut label_count = 0;
     for (row, line) in lines.iter().enumerate() {
         let address = row as u16 - label_count;
@@ -138,7 +139,8 @@ mod tests {
     #[test]
     fn labels_collected() {
         let mut table = SymbolTable::new();
-        collect_labels("(a)\nb\nc\n \n(d)\ne", &mut table);
+        let lines = preprocess("(a)\nb\nc\n \n(d)\ne");
+        collect_labels(&lines, &mut table);
         assert_eq!(Some(0), table.resolve("a"));
         assert_eq!(Some(2), table.resolve("d"));
     }

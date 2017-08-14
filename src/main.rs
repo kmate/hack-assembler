@@ -70,8 +70,8 @@ fn main() {
 
     let buffer = read_input(matches.value_of("input")).expect("Input error");
     let mut table = symtab::SymbolTable::new();
-    parser::collect_labels(&buffer, &mut table);
     let lines = parser::preprocess(&buffer);
+    parser::collect_labels(&lines, &mut table);
     let insts = lines
         .iter()
         .filter(|line| parser::label_name(line).is_none())
